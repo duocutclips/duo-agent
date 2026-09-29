@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}{{ s.slug }} · DuoCut Studio{% endblock %}
+{% set busy = job and not job.done %}
+{% macro head(n, key, title, summary) -%}
+<summary><span class="num">{{ '✓' if (s.steps|selectattr('key','equalto',key)|first).done and s.current != key else n }}</span>
+<h2>{{ title }}</h2><span class="sum">{{ summary }}</span>
+<svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></summary>
+{%- endmacro %}
+{% macro cls(key) -%}step {{ 'done' if (s.steps|selectattr('key','equalto',key)|first).done }} {{ 'cur' if s.current == key }}{%- endmacro %}
+
+{% block main %}
+<div class="row between">
+  <div class="stack" style="gap:6px">
+    <a href="/" class="eyebrow">← All campaigns</a>
+    <h1>{{ s.slug }}</h1>
+  </div>
+  {% if s.verdict == 'GO' %}<span class="chip go">Campaign verdict: GO</span>{% elif s.verdict == 'NO-GO' %}<span class="chip nogo">Campaign verdict: NO-GO</span>{% endif %}
+</div>
+
+<nav class="stepper" aria-label="Steps">
+  {% for st in s.steps %}
+  <a href="#{{ st.key }}" class="{{ 'done' if st.done }} {{ 'cur' if s.current == st.key }}" data-open="{{ st.key }}">
+    <span class="n">{{ '✓' if st.done else loop.index }} · STEP {{ loop.index }}</span><span class="t">{{ st.label }}</span></a>
+  {% endfor %}
+</nav>
+
+<div id="jobbox" data-job="{{ job.id if job else '' }}" data-done="{{ 1 if (not job or job.done) else 0 }}"></div>
+
+<!-- 1 campaign page -->
+<details class="{{ cls('page') }}" id="page" {{ 'open' if s.current == 'page' }}>
+  {{ head(1, 'page', 'Paste the campaign page', (s.page.strip().splitlines()|first)[:80] if s.page_ok else 'Not added yet') }}
+  <div class="inner">
+    <p class="muted">Copy the whole Whop or Content Rewards campaign page: payout, rules, required tags, and where the footage comes from. Claude reads it to write the brief and follow the rules.</p>
+    <form id="pageform" class="stack">
+      <textarea class="page" name="text" placeholder="Paste the campaign page here…">{{ s.page }}</textarea>
+      <div class="row"><button type="submit">Save campaign page</button><span class="faint" id="pagesaved"></span></div>
+    </form>
+  </div>
+</details>
+
+<!-- 2 video -->
+<details class="{{ cls('video') }}" id="video" {{ 'open' if s.current == 'video' }}>
+  {{ head(2, 'video', 'Add the footage', s.source ~ ' · ' ~ s.source_size if s.source else 'No video yet') }}
+  <div class="inner">
+    <label class="drop" id="drop">
+      <input type="file" accept="video/*" id="file">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" style="color:var(--pink)"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      <b>Drop the video here, or click to choose</b>
+      <span class="muted" style="font-size:13px">Only footage the campaign allows. MP4, MOV, MKV or WEBM.</span>
+      <div class="bar" style="width:min(360px,80%);display:none" id="upbar"><i style="width:0"></i></div>
+      <span class="faint" id="uptext" style="font-size:13px"></span>
+    </label>
+    {% if s.videos %}
+    <div class="vids">
+      {% for v in s.videos %}
+      <form class="vid {{ 'on' if v.name == s.source }}" method="post" action="/c/{{ s.slug }}/source">
+        <input type="hidden" name="video" value="{{ v.name }}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>
+        <span class="name">{{ v.name }}</span><span class="faint mono">{{ v.stat().st_size|filesizeformat }}</span>
+        {% if v.name == s.source %}<span class="chip pink">Using this</span>{% else %}<button class="small ghost">Use this one</button>{% endif %}
+      </form>
+      {% endfor %}
+    </div>
+    <p class="faint" style="font-size:13px">Big files upload slowly through the browser. You can also copy them straight into <code>work/{{ s.slug }}/</code> and refresh.</p>
+    {% endif %}
+  </div>
+</details>
+
+<!-- 3 analyze -->
+<details class="{{ cls('analyze') }}" id="analyze" {{ 'open' if s.current == 'analyze' }}>
+  {{ head(3, 'analyze', 'Analyze the video',
+      ((s.words ~ ' words of speech' if s.words else 'No speech, snapshots only') ~ ' · ' ~ s.sheets|length ~ ' contact sheets') if s.scan else ('Transcript done, scan missing' if s.transcript else 'Not analyzed yet')) }}
+  <div class="inner">
+    <p class="muted">DuoCut listens for speech (for captions and quotes) and takes snapshots plus a loudness and action timeline (for gameplay with little talking). The first run downloads the speech model, about 500 MB.</p>
+    {% if s.source %}
+    <form id="analyzeform" class="row">
+      <select name="model" aria-label="Speech model">
+        <option value="base">Fast (base): quick, fine for clear speech</option>
+        <option value="small" selected>Balanced (small): the default</option>
+        <option value="medium">Accurate (medium): accents, music, noise. Slow on CPU</option>
+      </select>
+      <button {{ 'disabled' if busy }}>{{ 'Analyze again' if s.scan else 'Analyze video' }}</button>
+      {% if s.transcript and not s.scan %}<button class="ghost" name="only" value="scan" {{ 'disabled' if busy }}>Only take snapshots</button>{% endif %}
+    </form>
+    {% else %}<p class="faint">Add a video first.</p>{% endif %}
+    {% if s.transcript or s.sheets %}
+    <div class="grid g2">
+      {% if s.transcript %}<details><summary class="muted" style="cursor:pointer">Transcript</summary><pre>{{ s.transcript[:6000] }}</pre></details>{% endif %}
+      {% if s.sheets %}<details><summary class="muted" style="cursor:pointer">What Claude sees ({{ s.sheets|length }} contact sheets)</summary>
+        <div class="sheets" style="margin-top:8px">{% for sh in s.sheets %}<a href="/media/work/{{ s.slug }}/{{ s.source.rsplit('.',1)[0] }}.scan/{{ sh }}" target="_blank"><img loading="lazy" src="/media/work/{{ s.slug }}/{{ s.source.rsplit('.',1)[0] }}.scan/{{ sh }}" alt="Snapshots {{ loop.index }}"></a>{% endfor %}</div></details>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</details>
+
+<!-- 4 moments -->
+<details class="{{ cls('moments') }}" id="moments" {{ 'open' if s.current in ('moments', 'clips') }}>
+  {{ head(4, 'moments', 'Pick the moments', (s.cuts|length ~ ' moments · ' ~ s.cuts|selectattr('approved')|list|length ~ ' picked') if s.cuts else 'Claude hasn\'t looked yet') }}
+  <div class="inner">
+    <div class="row between">
+      <p class="muted" style="max-width:60ch">Claude reads the campaign, writes a brief with a GO or NO-GO, then picks the best moments with a hook and a caption for each. Uses your Claude Code sign-in.</p>
+      {% if claude %}
+      <button id="findbtn" {{ 'disabled' if busy or not s.scan }} data-replace="{{ 1 if s.cuts else 0 }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>
+        {{ 'Find moments again' if s.cuts else 'Find moments with Claude' }}</button>
+      {% endif %}
+    </div>
+    {% if not claude %}<div class="notice warn"><div>Claude Code isn't installed or signed in, so this step is off. You can still add moments by hand below.</div></div>
+    {% elif not s.scan %}<p class="faint">Analyze the video first.</p>{% endif %}
+
+    {% if s.brief %}
+    <details {{ 'open' if s.verdict == 'NO-GO' }}><summary class="row" style="cursor:pointer">
+      <b>Campaign brief</b>{% if s.verdict == 'GO' %}<span class="chip go">GO</span>{% elif s.verdict == 'NO-GO' %}<span class="chip nogo">NO-GO</span>{% endif %}
+      {% for r in rules[:4] %}<span class="chip">{{ r[:48] }}</span>{% endfor %}</summary>
+      <pre class="brief">{{ s.brief }}</pre></details>
+    {% endif %}
+
+    {% if s.brief and not s.cuts and not busy %}
+    <div class="notice {{ 'err' if s.verdict == 'NO-GO' else 'warn' }}"><div>
+      <b>{{ 'Claude says skip this campaign.' if s.verdict == 'NO-GO' else 'Claude didn\'t find moments worth cutting.' }}</b>
+      {% if job and job.kind == 'find' and job.result %}<p style="margin-top:6px">{{ job.result }}</p>
+      {% else %}<p style="margin-top:6px">Read the brief above for why. You can add moments by hand, or try another video.</p>{% endif %}
+    </div></div>
+    {% endif %}
+    <div class="moments" id="moments-list"></div>
+    <div><button class="ghost small" type="button" id="addmoment">+ Add a moment by hand</button></div>
+  </div>
+</details>
+
+{% if s.cuts or s.clips %}
+<div class="actionbar" id="actionbar">
+  <span><b id="pickcount">0</b> <span class="muted">picked to make</span> <span class="faint" id="dirty"></span></span>
+  <div class="row">
+    <button class="ghost" type="button" id="savecuts">Save changes</button>
+    <button type="button" id="renderbtn" {{ 'disabled' if busy }}>Render picked clips</button>
+  </div>
+</div>
+{% endif %}
+
+<!-- 5 clips -->
+<details class="{{ cls('clips') }}" id="clips" {{ 'open' if s.clips }}>
+  {{ head(5, 'clips', 'Your clips', (s.clips|length ~ ' made · ' ~ s.posted ~ ' posted') if s.clips else 'None yet') }}
+  <div class="inner">
+    {% if s.clips %}
+    <div class="clips">
+      {% for r in s.clips|reverse %}
+      <div class="clip">
+        <video controls preload="metadata" src="/media/queue/{{ r.clip_id }}/final.mp4"></video>
+        <div class="stack" style="gap:8px;align-content:start">
+          <b>{{ r.hook or 'Untitled' }}</b>
+          <span class="faint mono" style="font-size:12px">{{ r.start }}–{{ r.end }}</span>
+          {% if r.post_url %}<span class="chip done">Posted on {{ r.platform }}</span>{% else %}<span class="chip warn">Not posted</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <a class="btn start" href="/queue">Go post them →</a>
+    {% else %}<p class="faint">Rendered clips show up here and in Clips to post.</p>{% endif %}
+  </div>
+</details>
+{% endblock %}
+
+{% block script %}
+<script>
+window.DUO = {
+  slug: {{ s.slug|tojson }},
+  source: {{ s.source|tojson }},
+  cuts: {{ s.cuts|tojson }},
+  job: {{ job|tojson }},
+};
+initCampaign();
+</script>
+{% endblock %}

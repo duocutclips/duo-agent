@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Clips to post · DuoCut Studio{% endblock %}
+{% block main %}
+<div class="hero">
+  <div class="stack" style="gap:6px">
+    <span class="eyebrow">Your queue</span>
+    <h1>Clips to post</h1>
+    <p class="muted">Watch each clip all the way through, copy the caption, and post it yourself. Then paste the link so DuoCut can track it.</p>
+  </div>
+  <nav class="tabs">
+    <a href="?show=todo" class="{{ 'on' if show == 'todo' }}">To post · {{ t.waiting }}</a>
+    <a href="?show=posted" class="{{ 'on' if show == 'posted' }}">Posted · {{ t.posted }}</a>
+    <a href="?show=all" class="{{ 'on' if show == 'all' }}">All · {{ t.made }}</a>
+  </nav>
+</div>
+
+<div class="notice info"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+<div>Posting is always done by a person, by hand or with TikTok's, YouTube Studio's or Meta's own scheduler. Automated posting from your own tool breaks the platforms' rules and Content Rewards bans linked accounts together.</div></div>
+
+{% if rows %}
+<div class="clips">
+{% for r in rows %}
+<div class="card clip" id="{{ r.clip_id }}">
+  {% if r.has_video %}<video controls preload="metadata" src="/media/queue/{{ r.clip_id }}/final.mp4"></video>
+  {% else %}<div class="card flat muted">Video file missing</div>{% endif %}
+  <div class="stack" style="gap:10px;align-content:start">
+    <div class="stack" style="gap:4px">
+      <a class="eyebrow" href="/c/{{ r.campaign }}">{{ r.campaign }}</a>
+      <b>{{ r.hook or r.clip_id }}</b>
+      <span class="faint mono" style="font-size:11.5px">{{ r.start }}–{{ r.end }}</span>
+    </div>
+    {% if r.post_url %}<span class="chip done">Posted on {{ r.platform }}{{ ' by ' ~ r.posted_by if r.posted_by }}</span>{% else %}<span class="chip warn">Not posted yet</span>{% endif %}
+    {% if r.caption_text %}<div class="cap" id="cap-{{ loop.index }}">{{ r.caption_text }}</div>
+    <button class="small ghost" type="button" data-copy="cap-{{ loop.index }}">Copy caption</button>{% endif %}
+    {% if not r.post_url %}
+    <div class="platforms">
+      <a class="btn small ghost" href="https://www.tiktok.com/tiktokstudio/upload" target="_blank" rel="noopener">TikTok Studio ↗</a>
+      <a class="btn small ghost" href="https://studio.youtube.com" target="_blank" rel="noopener">YouTube Studio ↗</a>
+      <a class="btn small ghost" href="https://business.facebook.com/latest/content_calendar" target="_blank" rel="noopener">Meta Suite ↗</a>
+    </div>
+    {% endif %}
+    <details {{ 'open' if not r.post_url }}><summary class="muted" style="cursor:pointer;font-size:13px">{{ 'Change post link' if r.post_url else 'I posted it' }}</summary>
+    <form method="post" action="/clip/{{ r.clip_id }}/posted" data-ajax="Post saved" class="stack" style="gap:8px;margin-top:8px">
+      <div class="row">
+        <select name="platform">{% for p in ['tiktok','youtube','instagram','x'] %}<option value="{{ p }}" {{ 'selected' if r.platform == p }}>{{ {'tiktok':'TikTok','youtube':'YouTube','instagram':'Instagram','x':'X'}[p] }}</option>{% endfor %}</select>
+        <input name="by" placeholder="Who posted" value="{{ r.posted_by }}" style="flex:1;min-width:90px">
+      </div>
+      <input name="url" placeholder="Paste the post link" value="{{ r.post_url }}" required>
+      <button class="small">Save post</button>
+    </form></details>
+    {% if r.post_url %}
+    <details><summary class="muted" style="cursor:pointer;font-size:13px">{{ 'Update numbers' if r.views_7d else 'Add views and payout' }}{% if r.views_7d %} · {{ r.views_7d|k }} views{% endif %}</summary>
+    <form method="post" action="/clip/{{ r.clip_id }}/views" data-ajax="Numbers saved" class="stack" style="gap:8px;margin-top:8px">
+      <label class="field">Views after 7 days<input name="views" inputmode="numeric" value="{{ r.views_7d }}"></label>
+      <div class="row"><label class="field" style="flex:1">Approved views<input name="approved" inputmode="numeric" value="{{ r.approved_views }}"></label>
+      <label class="field" style="flex:1">Payout $<input name="payout" inputmode="decimal" value="{{ r.payout_usd }}"></label></div>
+      <button class="small">Save numbers</button>
+    </form></details>
+    <a href="{{ r.post_url }}" target="_blank" rel="noopener" style="font-size:13px">Open the post ↗</a>
+    {% endif %}
+    <details><summary class="faint" style="cursor:pointer;font-size:12.5px">Posting checklist and campaign rules</summary><pre>{{ r.checklist }}</pre></details>
+  </div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card empty">
+  <h2>{{ 'Nothing waiting' if show == 'todo' else 'Nothing here yet' }}</h2>
+  <p class="muted">{{ 'Every clip you made is posted. Nice.' if show == 'todo' and t.made else 'Make clips from a campaign and they show up here.' }}</p>
+  <a class="btn" href="/">Go to campaigns</a>
+</div>
+{% endif %}
+{% endblock %}
+{% block script %}<script>initQueue();</script>{% endblock %}

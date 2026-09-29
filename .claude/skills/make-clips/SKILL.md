@@ -9,8 +9,10 @@ The pipeline has four stops. Two of them wait for a person. Never skip a stop.
 
 1. **Brief** → run the `campaign-brief` skill on `work/<campaign>/campaign.md`.
    If the verdict is NO-GO, stop and say why.
-2. **Transcript** → if `work/<campaign>/<video>.transcript.txt` does not exist, run
+2. **Analyze** → if `work/<campaign>/<video>.transcript.txt` does not exist, run
    `python scripts/duocut.py transcribe work/<campaign>/<video>` (use `--model medium` for music, accents or noisy audio).
+   If `work/<campaign>/<video>.scan.txt` does not exist, run `python scripts/duocut.py scan work/<campaign>/<video>`.
+   The scan makes contact sheets and a loudness/action timeline, which matter most for gameplay with little talking.
 3. **Moments** → run the `clip-finder` skill. It writes `work/<campaign>/cuts.json` with every cut set to `"approved": false`.
    Then run `caption-writer` to fill each cut's `caption`.
    **Stop here.** Show the person a numbered list: time range, hook text, score, one-line why. Ask which numbers to make.

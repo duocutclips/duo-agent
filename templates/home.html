@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Campaigns · DuoCut Studio{% endblock %}
+{% block main %}
+<div class="hero">
+  <div class="stack" style="gap:6px">
+    <span class="eyebrow">DuoCut Clips</span>
+    <h1>Campaigns</h1>
+    <p class="muted">Paste a campaign, drop in the footage, and Claude finds the moments. You pick, render and post.</p>
+  </div>
+</div>
+
+<div class="grid g4">
+  <div class="card stat"><b>{{ campaigns|length }}</b><span>campaigns</span></div>
+  <div class="card stat"><b>{{ t.waiting }}</b><span>clips waiting to post</span></div>
+  <div class="card stat"><b>{{ t.views|k }}</b><span>views logged</span></div>
+  <div class="card stat"><b>${{ '%.2f'|format(t.payout) }}</b><span>payouts logged</span></div>
+</div>
+
+{% if not claude %}
+<div class="notice warn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+<div><b>Claude Code isn't installed or isn't signed in.</b> Everything works except "Find moments". Install it from code.claude.com/docs/en/setup, run <code>claude</code> once in a terminal to sign in, then restart this app.</div></div>
+{% endif %}
+
+<form class="card stack" method="post" action="/new">
+  <h2>Start a campaign</h2>
+  <div class="newform">
+    <input name="name" placeholder="Name it, for example: 99 Nights gameplay" required autocomplete="off" id="newname">
+    <button>Create campaign</button>
+  </div>
+</form>
+
+{% if campaigns %}
+<div class="grid g3">
+  {% for c in campaigns %}
+  {% set done = c.steps|selectattr('done')|list|length %}
+  <a class="card camp" href="/c/{{ c.slug }}">
+    <div class="row between"><h3>{{ c.slug }}</h3>
+      {% if c.verdict == 'GO' %}<span class="chip go">GO</span>{% elif c.verdict == 'NO-GO' %}<span class="chip nogo">NO-GO</span>{% endif %}</div>
+    <div class="bar"><i style="width: {{ (done / 5 * 100)|int }}%"></i></div>
+    <div class="pips">
+      {% for st in c.steps %}<span class="chip {{ 'done' if st.done }}">{{ '✓ ' if st.done }}{{ st.label }}</span>{% endfor %}
+    </div>
+    <p class="muted" style="font-size:13px">
+      {% if c.clips %}{{ c.clips|length }} clips made · {{ c.posted }} posted
+      {% elif c.cuts %}{{ c.cuts|length }} moments found · pick the ones to make
+      {% elif c.source %}{{ c.source }}
+      {% else %}Next: paste the campaign page{% endif %}
+    </p>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card empty">
+  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--pink)"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M10 9l5 2.5-5 2.5z"/></svg>
+  <h2>No campaigns yet</h2>
+  <p class="muted">Create one above. It takes about a minute to set up.</p>
+</div>
+{% endif %}
+{% endblock %}

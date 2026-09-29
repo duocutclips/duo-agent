@@ -47,3 +47,5 @@ Posting, scheduling, logging in to social accounts, joining campaigns, and anyth
 - **"Could not load the speech model"**: the first transcription needs internet. Try again on a normal connection.
 - **"Claude Code not found"**: install it, run `claude` once to sign in, then restart the app.
 - **Port already in use**: set `DUOCUT_PORT=5051` before starting, or close the other copy of the app.
+- **`cublas64_12.dll is not found` (or another CUDA error)**: your PC has an NVIDIA card but not the CUDA libraries. DuoCut now switches to the CPU on its own, so this should no longer stop you; it is just slower. To force the CPU every time, set `DUOCUT_DEVICE=cpu` before starting. Only set `DUOCUT_DEVICE=cuda` if you have installed CUDA 12 and cuDNN 9.
+- **The video has no talking (gameplay)**: that's fine. Analyze takes snapshots of the whole video and Claude picks moments from those.

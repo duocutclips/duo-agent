@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}What's working · DuoCut Studio{% endblock %}
+{% block main %}
+<div class="stack" style="gap:6px">
+  <span class="eyebrow">Insights</span>
+  <h1>What's working</h1>
+  <p class="muted">Built from the views and payouts you log in Clips to post. For a deeper weekly review, ask Claude Code: "run the clip-analyst skill".</p>
+</div>
+<div class="grid g4">
+  <div class="card stat"><b>{{ t.made }}</b><span>clips made</span></div>
+  <div class="card stat"><b>{{ t.posted }}</b><span>posted</span></div>
+  <div class="card stat"><b>{{ t.views|k }}</b><span>views logged</span></div>
+  <div class="card stat"><b>${{ '%.2f'|format(t.payout) }}</b><span>payouts logged</span></div>
+</div>
+{% if n %}
+<div class="grid g2">
+  <div class="card stack">
+    <h2>Top hooks by views</h2>
+    {% for r in top %}
+    <div class="hbar"><span>{{ r.hook or r.clip_id }} <span class="faint">· {{ r.platform }}</span></span><span class="v">{{ r.views_7d|k }}</span>
+      <span class="track"><i style="width: {{ ((r.views_7d|float) / peak * 100)|round(1) }}%"></i></span></div>
+    {% endfor %}
+  </div>
+  <div class="card stack">
+    <h2>By campaign</h2>
+    <table><tr><th>Campaign</th><th class="n">Clips</th><th class="n">Avg views</th><th class="n">Payout</th></tr>
+    {% for name, g in groups.items() %}<tr><td>{{ name }}</td><td class="n">{{ g.clips }}</td><td class="n">{{ (g.views / g.clips)|k }}</td><td class="n">${{ '%.2f'|format(g.payout) }}</td></tr>{% endfor %}
+    </table>
+    <h2 style="margin-top:8px">By platform</h2>
+    <table><tr><th>Platform</th><th class="n">Clips</th><th class="n">Avg views</th></tr>
+    {% for name, g in plats.items() %}<tr><td>{{ name }}</td><td class="n">{{ g.clips }}</td><td class="n">{{ (g.views / g.clips)|k }}</td></tr>{% endfor %}
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card empty"><h2>No numbers yet</h2><p class="muted">After a clip has been up for a week, add its views in Clips to post. The patterns show up here.</p><a class="btn" href="/queue?show=posted">Add views</a></div>
+{% endif %}
+{% endblock %}

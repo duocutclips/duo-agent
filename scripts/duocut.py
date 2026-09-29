@@ -104,34 +104,170 @@ def cmd_new(a):
 
 # ---------- transcribe ----------
 
-def cmd_transcribe(a):
-    try:
-        from faster_whisper import WhisperModel
-    except ImportError:
-        sys.exit("Run: pip install faster-whisper")
-    src = Path(a.video)
-    try:
-        model = WhisperModel(a.model, device="auto", compute_type="int8")
-    except Exception as e:  # first run downloads the model from Hugging Face
-        sys.exit(f"Could not load the '{a.model}' speech model: {e}\n"
-                 "The first run needs internet to download it. Check your connection and try again.")
-    segments, info = model.transcribe(str(src), word_timestamps=True, vad_filter=True,
-                                      language=a.language)
+GPU_ERRORS = ("cublas", "cudnn", "cudart", "cuda", "cannot be loaded", "no kernel image")
+
+
+def progress(pct, status=None):
+    """Machine-readable lines the app turns into a progress bar."""
+    print(f"PROGRESS {max(0, min(100, int(pct)))}", flush=True)
+    if status:
+        print(f"STATUS {status}", flush=True)
+
+
+def _whisper(model_name, device, src, language):
+    from faster_whisper import WhisperModel
+    compute = "float16" if device == "cuda" else "int8"
+    model = WhisperModel(model_name, device=device, compute_type=compute)
+    segments, info = model.transcribe(str(src), word_timestamps=True, vad_filter=True, language=language)
     segs = []
-    for s in segments:
+    for s in segments:  # lazy: the real work (and any GPU error) happens while iterating
         segs.append({
             "start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip(),
             "words": [{"w": w.word.strip(), "s": round(w.start, 2), "e": round(w.end, 2)}
                       for w in (s.words or []) if w.word.strip()],
         })
         print(f"  [{stamp(s.start)}] {s.text.strip()}", flush=True)
+        if info.duration:
+            progress(100 * s.end / info.duration)
+    return segs, info
+
+
+def pick_devices(choice):
+    if choice in ("cpu", "cuda"):
+        return [choice]
+    try:
+        import ctranslate2
+        if ctranslate2.get_cuda_device_count() > 0:
+            return ["cuda", "cpu"]
+    except Exception:
+        pass
+    return ["cpu"]
+
+
+def cmd_transcribe(a):
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+    os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+    import warnings
+    warnings.filterwarnings("ignore")
+    try:
+        import faster_whisper  # noqa: F401
+    except ImportError:
+        sys.exit("Run: pip install faster-whisper")
+    src = Path(a.video)
+    progress(0, f"Loading the {a.model} speech model (the first time, it downloads it)")
+    segs = info = None
+    for device in pick_devices(a.device):
+        try:
+            progress(1, "Listening to the video" + (" on your graphics card" if device == "cuda" else ""))
+            segs, info = _whisper(a.model, device, src, a.language)
+            break
+        except Exception as e:
+            msg = str(e).lower()
+            if device == "cuda" and any(k in msg for k in GPU_ERRORS):
+                print(f"GPU not usable ({e}). Switching to the CPU: slower, but it works.", flush=True)
+                continue
+            if "connect" in msg or "resolve" in msg or "proxy" in msg or "offline" in msg:
+                sys.exit(f"ERROR Could not download the '{a.model}' speech model. "
+                         "The first run needs internet. Check your connection and try again.\n{e}")
+            raise
     out = src.with_suffix(".words.json")
     out.write_text(json.dumps({"source": src.name, "language": info.language,
                                "duration": round(info.duration, 2), "segments": segs},
                               ensure_ascii=False), encoding="utf-8")
     txt = src.with_suffix(".transcript.txt")
-    txt.write_text(render_transcript(segs), encoding="utf-8")
+    txt.write_text(render_transcript(segs) if segs else "(no speech found in this video)\n", encoding="utf-8")
+    words = sum(len(x["words"]) for x in segs)
+    progress(100, f"Transcript done: {words} words" if words else "No speech found. The visual scan will be used instead.")
     print(f"\nWrote {out.name} and {txt.name}")
+
+
+# ---------- scan (for gameplay and footage with little speech) ----------
+
+def media_duration(path):
+    r = subprocess.run([ffmpeg_exe(), "-hide_banner", "-i", str(path)], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace")
+    m = re.search(r"Duration: (\d+):(\d+):([\d.]+)", r.stderr)
+    if not m:
+        sys.exit(f"ERROR Could not read the video: {path.name}. Is it a real video file?")
+    return int(m[1]) * 3600 + int(m[2]) * 60 + float(m[3])
+
+
+def cmd_scan(a):
+    """Contact sheets of frames plus loudness and scene-change timelines, so Claude can
+    pick moments in footage without much speech (gameplay, reactions, music)."""
+    src = Path(a.video)
+    ff = ffmpeg_exe()
+    dur = media_duration(src)
+    step = max(2.0, round(dur / 96, 1))  # at most ~96 frames = 6 sheets of 16
+    out = src.parent / (src.stem + ".scan")
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir()
+    progress(5, "Taking snapshots of the video")
+    subprocess.run([ff, "-hide_banner", "-loglevel", "error", "-i", str(src),
+                    "-vf", f"fps=1/{step},scale=384:-2", "-q:v", "4", str(out / "f_%04d.jpg")], check=True)
+    if not any(out.glob("f_*.jpg")):
+        sys.exit("ERROR Could not take snapshots from this video.")
+    frames = sorted(out.glob("f_*.jpg"))
+    progress(40, "Building contact sheets")
+    sheets = []
+    fw, fh = 384, 216
+    for i in range(0, len(frames), 16):
+        n = i // 16 + 1
+        times = [round(j * step, 1) for j in range(i, min(i + 16, len(frames)))]
+        # stamp each snapshot with its time so the sheet reads on its own
+        labels = (f"[Script Info]\nScriptType: v4.00+\nPlayResX: {fw}\nPlayResY: {fh}\n\n[V4+ Styles]\n"
+                  "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, "
+                  "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, "
+                  "Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n"
+                  "Style: T,Arial,22,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,4,0,7,6,6,6,1\n"
+                  "\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
+        labels += "\n".join(f"Dialogue: 0,{ass_time(k)},{ass_time(k + 0.99)},T,,0,0,0,,{stamp(t)}"
+                             for k, t in enumerate(times)) + "\n"
+        (out / "labels.ass").write_text(labels, encoding="utf-8")
+        subprocess.run([ff, "-hide_banner", "-loglevel", "error", "-framerate", "1", "-start_number", str(i + 1),
+                        "-i", "f_%04d.jpg", "-frames:v", "1",
+                        "-vf", f"scale={fw}:{fh}:force_original_aspect_ratio=decrease,pad={fw}:{fh}:(ow-iw)/2:(oh-ih)/2,"
+                               "ass=labels.ass,tile=4x4:padding=6:margin=6",
+                        f"sheet_{n:02d}.jpg"], check=True, cwd=out)
+        sheets.append({"file": f"sheet_{n:02d}.jpg", "times": times})
+    progress(60, "Measuring loudness and action")
+    r = subprocess.run([ff, "-hide_banner", "-nostats", "-i", str(src), "-vn",
+                        "-af", "aresample=8000,asetnsamples=n=8000,astats=metadata=1:reset=1,"
+                               "ametadata=print:key=lavfi.astats.Overall.RMS_level",
+                        "-f", "null", "-"], capture_output=True, text=True, encoding="utf-8", errors="replace")
+    loud = [float(v) if v not in ("-inf", "inf", "nan") else -90.0
+            for v in re.findall(r"RMS_level=(-?[\d.]+|-?inf|nan)", r.stderr)]
+    r = subprocess.run([ff, "-hide_banner", "-nostats", "-i", str(src), "-an",
+                        "-vf", "scale=160:-2,select='gt(scene,0.30)',showinfo", "-f", "null", "-"],
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    cuts = [float(t) for t in re.findall(r"pts_time:([\d.]+)", r.stderr)]
+    progress(90, "Writing the scan summary")
+    win = 5
+    rows = []
+    for t0 in range(0, int(dur) + 1, win):
+        seg = loud[t0:t0 + win]
+        db = max(seg) if seg else -90.0
+        sc = sum(1 for c in cuts if t0 <= c < t0 + win)
+        rows.append({"t": t0, "loud_db": round(db, 1), "scene_changes": sc})
+    base = sorted(x["loud_db"] for x in rows)[len(rows) // 2] if rows else -90
+    for x in rows:
+        x["energy"] = round(max(0.0, x["loud_db"] - base) + 2 * x["scene_changes"], 1)
+    top = sorted(rows, key=lambda x: x["energy"], reverse=True)[:12]
+    (out / "scan.json").write_text(json.dumps({"source": src.name, "duration": round(dur, 1), "frame_every": step,
+                                               "sheets": sheets, "windows": rows}, indent=1), encoding="utf-8")
+    lines = [f"Visual scan of {src.name} ({stamp(dur)} long)",
+             f"Contact sheets in {out.name}/: 16 snapshots each, 4 per row, left to right then top to bottom,",
+             f"one snapshot every {step} seconds.", ""]
+    for sh in sheets:
+        lines.append(f"{sh['file']}: {stamp(sh['times'][0])} to {stamp(sh['times'][-1])}")
+    lines += ["", f"Loudest and busiest {win}-second windows (energy = dB above the median + 2 x scene changes):"]
+    for x in top:
+        lines.append(f"  {stamp(x['t'])} to {stamp(x['t'] + win)}  energy {x['energy']:>5}  "
+                     f"loudness {x['loud_db']} dB  scene changes {x['scene_changes']}")
+    (src.parent / (src.stem + ".scan.txt")).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    progress(100, f"Scan done: {len(sheets)} contact sheets")
+    print("\n".join(lines))
 
 
 def render_transcript(segs):
@@ -233,7 +369,7 @@ def cmd_cut(a):
     spec = json.loads(cuts_path.read_text(encoding="utf-8"))
     src = (cuts_path.parent / spec["source"]).resolve()
     if not src.exists():
-        sys.exit(f"Source video not found: {src}")
+        sys.exit(f"ERROR Source video not found: {src.name}")
     words_path = src.with_suffix(".words.json")
     words_json = json.loads(words_path.read_text(encoding="utf-8")) if words_path.exists() else None
     if words_json is None:
@@ -241,11 +377,12 @@ def cmd_cut(a):
     campaign = slugify(spec.get("campaign", cuts_path.parent.name))
     todo = [c for c in spec["cuts"] if c.get("approved") and not c.get("rendered")]
     if not todo:
-        sys.exit('No cuts marked "approved": true that are not rendered yet.')
+        sys.exit('ERROR No clips are ticked. Tick at least one moment first.')
     ff = ffmpeg_exe()
     rows = read_log()
     today = dt.date.today().isoformat()
-    for c in todo:
+    for idx, c in enumerate(todo):
+        progress(100 * idx / len(todo), f"Rendering clip {idx + 1} of {len(todo)}")
         start, end = to_seconds(c["start"]), to_seconds(c["end"])
         if end <= start:
             print(f"  skip cut {c.get('id')}: end is before start")
@@ -269,18 +406,19 @@ def cmd_cut(a):
                "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-c:a", "aac", "-b:a", "160k", "-ar", "48000",
                "-movflags", "+faststart", "final.mp4"]
         print(f"  rendering {clip_id} ({stamp(start)} to {stamp(end)}, {length:.1f}s, {mode})", flush=True)
-        r = subprocess.run(cmd, cwd=out, capture_output=True, text=True)
+        r = subprocess.run(cmd, cwd=out, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if r.returncode != 0:
             print(r.stderr[-2000:])
-            sys.exit(f"ffmpeg failed on cut {c.get('id')}")
+            sys.exit(f"ERROR The video tool failed on clip {c.get('id')}. Details are above.")
         (out / "caption.txt").write_text(c.get("caption", "").strip() + "\n", encoding="utf-8")
         (out / "README.md").write_text(checklist(clip_id, c, spec, stamp(start), stamp(end)), encoding="utf-8")
         rows.append({"date": today, "clip_id": clip_id, "campaign": campaign, "source": spec["source"],
                      "start": stamp(start), "end": stamp(end), "hook": c.get("hook_text", ""),
                      "score": c.get("score", "")})
         c["rendered"] = clip_id
-    write_log(rows)
-    cuts_path.write_text(json.dumps(spec, indent=2, ensure_ascii=False), encoding="utf-8")
+        write_log(rows)
+        cuts_path.write_text(json.dumps(spec, indent=2, ensure_ascii=False), encoding="utf-8")
+    progress(100, f"{len(todo)} clip(s) ready")
     print(f"\nDone. Review the clips in {QUEUE.relative_to(ROOT)}/ before posting.")
 
 
@@ -364,7 +502,10 @@ def main():
     s = sub.add_parser("new"); s.add_argument("campaign"); s.set_defaults(f=cmd_new)
     s = sub.add_parser("transcribe"); s.add_argument("video")
     s.add_argument("--model", default="small", help="tiny, base, small, medium, large-v3 (bigger = slower, better)")
-    s.add_argument("--language", default=None); s.set_defaults(f=cmd_transcribe)
+    s.add_argument("--language", default=None)
+    s.add_argument("--device", default=os.environ.get("DUOCUT_DEVICE", "auto"), choices=["auto", "cpu", "cuda"])
+    s.set_defaults(f=cmd_transcribe)
+    s = sub.add_parser("scan"); s.add_argument("video"); s.set_defaults(f=cmd_scan)
     s = sub.add_parser("cut"); s.add_argument("cuts")
     s.add_argument("--preset", default="medium"); s.set_defaults(f=cmd_cut)
     s = sub.add_parser("posted"); s.add_argument("clip_id"); s.add_argument("platform"); s.add_argument("url")
