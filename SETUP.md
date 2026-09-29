@@ -1,41 +1,49 @@
-# Set up the DuoCut clip agent on your computer
+# Set up DuoCut Studio on your computer
 
-About 30 minutes, once per person. Works on Windows, macOS and Linux.
+About 20 minutes, once per person. Works on Windows, macOS and Linux.
 
 ## 1. Install the tools
-- **Python 3.10+**: https://www.python.org/downloads/ (Windows: tick "Add python.exe to PATH").
-- **Claude Code**: follow https://code.claude.com/docs/en/setup and sign in with your Claude Pro account.
-- **Git** (optional but recommended): https://git-scm.com/downloads
-- **ffmpeg**: optional. If you don't install it, step 3 installs a bundled copy through pip.
+- **Python 3.10+**: https://www.python.org/downloads/ (Windows: tick "Add python.exe to PATH" in the installer).
+- **Claude Code**: follow https://code.claude.com/docs/en/setup, then run `claude` once in a terminal and sign in with your Claude Pro account. The app uses this sign-in for "Find moments".
+- **Git** or **GitHub Desktop**, to download this repo and keep it in sync.
+- ffmpeg is optional: if it isn't installed, the Python step below brings a bundled copy.
 
-## 2. Make the repo yours
-1. Create a **private** GitHub repo called `duo-agent`.
-2. Copy everything in this folder into it (including the hidden `.claude/` folder and `.gitignore`), commit and push.
-3. The other partner clones it. You both work in the same repo, so skills and the clip log stay shared.
+## 2. Get the repo
+Clone `duocutclips/duo-agent` (GitHub Desktop: File › Clone repository). Both partners use the same repo so skills and the clip log stay shared.
 
 ## 3. Install the Python parts
-In a terminal inside the repo:
+In a terminal inside the repo folder:
 
 ```
 python -m pip install -r requirements.txt
 ```
 
-The first `transcribe` run downloads the Whisper speech model (small = about 500 MB). After that it works offline.
+(macOS: use `python3` instead of `python`.)
 
-## 4. First run (about 20 minutes)
-1. Open the repo in Claude Code (`claude` in the terminal, or the desktop app's Code tab).
-2. Say: `make a work folder for the campaign "<campaign name>"`. Paste the campaign page into `work/<campaign>/campaign.md`.
-3. Put the source video the campaign allows into that folder.
-4. Say: `make clips from <video file> for <campaign>`.
-5. Claude writes the brief, transcribes, and shows you a numbered list of moments. Reply with the numbers you want.
-6. Clips appear in `queue/clips/<clip id>/final.mp4` with `caption.txt` and a posting checklist.
-7. Watch, post by hand (or with TikTok, YouTube or Meta's own scheduler), then tell Claude the link:
-   `posted <clip id> on tiktok: <url>`.
-8. Once a week: `log views` for each clip (Claude updates `data/clip-log.csv`) and `what's working?` for the analyst.
+## 4. Start the app
+- **Windows:** double-click `start-windows.bat`
+- **macOS:** double-click `start-mac.command` (first time: right-click › Open)
+- **Any system:** `python app.py`
 
-## Speed notes
-- Transcribing a 1-hour video with the `small` model takes roughly 5 to 15 minutes on a laptop CPU; `base` is faster and a bit less accurate.
-- Rendering a 30-second clip takes well under a minute on most laptops.
+Your browser opens **DuoCut Studio** at http://127.0.0.1:5050. It runs only on your computer. Close the terminal window to stop it.
+
+## 5. Make your first clips
+1. **New campaign**: type a name, for example "Roblox Campaign 1".
+2. **Step 1**: paste the whole campaign page (payout, rules, where footage comes from) and Save.
+3. **Step 2**: upload the source video the campaign allows. For very big files, copy them into `work/<campaign>/` and refresh.
+4. **Step 3**: Transcribe. The first time, it downloads the speech model (about 500 MB), so it takes longer. A 1-hour video takes roughly 5 to 15 minutes on a laptop.
+5. **Step 4**: Find moments. Claude writes the campaign brief with a GO or NO-GO, picks the best moments and writes captions.
+6. **Step 5**: tick the clips worth making, fix times or hooks if you want, then **Save and render ticked clips**.
+7. **Clips to post**: watch each clip, copy the caption, post it yourself (by hand or with TikTok, YouTube Studio or Meta's own scheduler), then paste the post link and Save post.
+8. A week later, type in views and payout. **What's working** shows which hooks and campaigns pay best.
+
+## Using Claude Code directly
+Everything the app does also works by chatting with Claude Code in this folder, for example `make clips from ep1.mp4 for roblox-campaign-1` or `run the clip-analyst skill`.
 
 ## What never happens automatically
 Posting, scheduling, logging in to social accounts, joining campaigns, and anything on Whop or Content Rewards. See `approval-rules.md`.
+
+## If something goes wrong
+- **"Could not load the speech model"**: the first transcription needs internet. Try again on a normal connection.
+- **"Claude Code not found"**: install it, run `claude` once to sign in, then restart the app.
+- **Port already in use**: set `DUOCUT_PORT=5051` before starting, or close the other copy of the app.

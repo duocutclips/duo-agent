@@ -110,7 +110,11 @@ def cmd_transcribe(a):
     except ImportError:
         sys.exit("Run: pip install faster-whisper")
     src = Path(a.video)
-    model = WhisperModel(a.model, device="auto", compute_type="int8")
+    try:
+        model = WhisperModel(a.model, device="auto", compute_type="int8")
+    except Exception as e:  # first run downloads the model from Hugging Face
+        sys.exit(f"Could not load the '{a.model}' speech model: {e}\n"
+                 "The first run needs internet to download it. Check your connection and try again.")
     segments, info = model.transcribe(str(src), word_timestamps=True, vad_filter=True,
                                       language=a.language)
     segs = []

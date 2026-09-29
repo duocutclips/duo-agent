@@ -1,0 +1,7 @@
+work/
+queue/
+*.mp4
+*.mov
+*.words.json
+.env
+__pycache__/
