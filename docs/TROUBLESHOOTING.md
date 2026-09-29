@@ -4,7 +4,7 @@ Start with **Settings → Integrations** (what is configured) and **Settings →
 
 ## The app says "Backend: not reachable" or "The local backend could not be started"
 
-* Run the setup script again (`scripts\setup.ps1`): the desktop app needs `backend\.venv`.
+* Run the setup script again (`.\scripts\setup.ps1`): the desktop app needs `backend\.venv`.
 * Installed app moved away from the checkout: set `CLIP_FACTORY_BACKEND_DIR` to the `backend` folder, and `CLIP_FACTORY_PYTHON` to its `.venv\Scripts\python.exe` if needed.
 * Start the backend by hand to see the error: `cd backend; .\.venv\Scripts\python.exe -m clipfactory.server`.
 * Browser development: run `npm run backend` (or `scripts/dev.sh --browser`) before opening http://localhost:1420.

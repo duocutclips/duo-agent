@@ -35,8 +35,8 @@ Windows (PowerShell):
 winget install Gyan.FFmpeg OpenJS.NodeJS.LTS Python.Python.3.11 Rustlang.Rustup
 git clone https://github.com/duocutclips/duo-agent.git
 cd duo-agent
-scripts\setup.ps1
-scripts\dev.ps1            # opens the desktop app
+.\scripts\setup.ps1
+.\scripts\dev.ps1            # opens the desktop app
 ```
 
 macOS / Linux:
@@ -53,7 +53,7 @@ No API keys are needed to try it. Add them to `.env` (copy `.env.example`) to en
 Offline demo from the command line (renders and exports two videos):
 
 ```bash
-scripts/demo.sh            # Windows: scripts\demo.ps1
+scripts/demo.sh            # Windows: .\scripts\demo.ps1
 ```
 
 ## Documentation

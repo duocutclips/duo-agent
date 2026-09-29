@@ -22,7 +22,7 @@ Open a **new** terminal after installing so `ffmpeg`, `node` and `cargo` are on 
 ```powershell
 git clone https://github.com/duocutclips/duo-agent.git
 cd duo-agent
-scripts\setup.ps1          # macOS/Linux: scripts/setup.sh
+.\scripts\setup.ps1          # macOS/Linux: scripts/setup.sh
 ```
 
 This creates `backend\.venv`, installs the backend in it, runs `npm ci` in `apps\desktop`, and copies `.env.example` to `.env`.
@@ -31,10 +31,12 @@ If PowerShell refuses to run scripts: `Set-ExecutionPolicy -Scope CurrentUser Re
 
 ## Run
 
+Run these from the `duo-agent` folder (the one with `README.md`). The first `dev.ps1` compiles the desktop window, which takes several minutes; later starts are fast.
+
 ```powershell
-scripts\dev.ps1            # desktop window with hot reload
-scripts\dev.ps1 -Browser   # backend + UI at http://localhost:1420 in your browser
-scripts\demo.ps1           # command-line offline demo: renders and exports 2 videos
+.\scripts\dev.ps1            # desktop window with hot reload
+.\scripts\dev.ps1 -Browser   # backend + UI at http://localhost:1420 in your browser
+.\scripts\demo.ps1           # command-line offline demo: renders and exports 2 videos
 ```
 
 ## API keys (all optional)
