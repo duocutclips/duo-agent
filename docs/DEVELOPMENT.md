@@ -27,7 +27,7 @@ scripts/check.sh --bundle    # also build the desktop installer
 scripts/ui-smoke.sh [shots/] # every page in Chromium against a live backend (needs the demo data)
 ```
 
-Windows: `scripts\check.ps1 [-Fast] [-Bundle]`.
+Windows: `.\scripts\check.ps1 [-Fast] [-Bundle]`.
 
 | Layer | Tool | Where |
 |---|---|---|
