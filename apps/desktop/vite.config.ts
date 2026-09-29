@@ -6,7 +6,13 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
-  server: { port: 1420, strictPort: true, host: "127.0.0.1" },
+  server: {
+    port: 1420,
+    strictPort: true,
+    host: "127.0.0.1",
+    // Rust build output under src-tauri/target is locked while cargo writes it (EBUSY on Windows).
+    watch: { ignored: ["**/src-tauri/**"] },
+  },
   preview: { port: 4173, strictPort: true, host: "127.0.0.1" },
   envPrefix: ["VITE_", "TAURI_ENV_"],
   build: { target: "es2022", outDir: "dist", sourcemap: false, chunkSizeWarningLimit: 900 },
