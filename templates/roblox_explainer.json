@@ -1,0 +1,76 @@
+{
+  "id": "roblox_explainer",
+  "version": 1,
+  "duration": {
+    "target": 30,
+    "min": 15,
+    "max": 45
+  },
+  "fit": "blur",
+  "pacing": {
+    "min_cut": 1.8,
+    "max_cut": 3.8,
+    "max_static_seconds": 3.5
+  },
+  "hook": {
+    "use_best_segment": true,
+    "title_card": true,
+    "title_seconds": 1.8,
+    "sfx": "impact",
+    "punch_in": true
+  },
+  "cta": {
+    "end_card": true,
+    "seconds": 2.0,
+    "sfx": "success",
+    "text": "{cta}"
+  },
+  "zoom": {
+    "intensity": 0.08,
+    "every_n_cuts": 3,
+    "ramp": 0.22,
+    "hold": 0.6,
+    "on_emphasis": true
+  },
+  "sfx": {
+    "density": 0.3,
+    "transition": "click",
+    "emphasis": "pop",
+    "volume": 0.55
+  },
+  "music": {
+    "enabled": true,
+    "volume": 0.16,
+    "duck_to": 0.25,
+    "fade_in": 0.6,
+    "fade_out": 1.2,
+    "loop": true
+  },
+  "captions": {
+    "font": "DejaVu Sans",
+    "size": 86,
+    "bold": true,
+    "uppercase": true,
+    "primary": "#FFFFFF",
+    "highlight": "#5CE1FF",
+    "stroke": "#000000",
+    "stroke_width": 7,
+    "shadow": 3,
+    "position": "center",
+    "margin_v": 0,
+    "max_words": 4,
+    "word_emphasis": true
+  },
+  "title": {
+    "size": 78,
+    "primary": "#FFFFFF",
+    "box": "#101014",
+    "margin_v": 260
+  },
+  "transitions": {
+    "fade_in": 0.15,
+    "fade_out": 0.45
+  },
+  "name": "Explainer",
+  "description": "Clear and calm: longer shots, center captions, fewer effects."
+}

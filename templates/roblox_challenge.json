@@ -1,0 +1,76 @@
+{
+  "id": "roblox_challenge",
+  "version": 1,
+  "duration": {
+    "target": 30,
+    "min": 15,
+    "max": 45
+  },
+  "fit": "crop",
+  "pacing": {
+    "min_cut": 0.9,
+    "max_cut": 2.2,
+    "max_static_seconds": 3.5
+  },
+  "hook": {
+    "use_best_segment": true,
+    "title_card": true,
+    "title_seconds": 1.8,
+    "sfx": "impact",
+    "punch_in": true
+  },
+  "cta": {
+    "end_card": true,
+    "seconds": 2.0,
+    "sfx": "success",
+    "text": "{cta}"
+  },
+  "zoom": {
+    "intensity": 0.16,
+    "every_n_cuts": 1,
+    "ramp": 0.22,
+    "hold": 0.4,
+    "on_emphasis": true
+  },
+  "sfx": {
+    "density": 0.8,
+    "transition": "whoosh",
+    "emphasis": "impact",
+    "volume": 0.55
+  },
+  "music": {
+    "enabled": true,
+    "volume": 0.26,
+    "duck_to": 0.25,
+    "fade_in": 0.6,
+    "fade_out": 1.2,
+    "loop": true
+  },
+  "captions": {
+    "font": "DejaVu Sans",
+    "size": 86,
+    "bold": true,
+    "uppercase": true,
+    "primary": "#FFFFFF",
+    "highlight": "#FF5C5C",
+    "stroke": "#000000",
+    "stroke_width": 7,
+    "shadow": 3,
+    "position": "lower_third",
+    "margin_v": 560,
+    "max_words": 2,
+    "word_emphasis": true
+  },
+  "title": {
+    "size": 78,
+    "primary": "#FFFFFF",
+    "box": "#101014",
+    "margin_v": 260
+  },
+  "transitions": {
+    "fade_in": 0.15,
+    "fade_out": 0.45
+  },
+  "name": "Challenge",
+  "description": "High energy: fast cuts, frequent punch-ins, dense SFX."
+}
