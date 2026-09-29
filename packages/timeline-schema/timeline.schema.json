@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://roblox-clip-factory.local/timeline.schema.json",
+  "title": "Roblox Clip Factory timeline",
+  "description": "Internal timeline representation. The renderer converts it into FFmpeg operations. Times are seconds on the output timeline.",
+  "type": "object",
+  "required": ["version", "width", "height", "fps", "duration", "items"],
+  "properties": {
+    "version": {"const": 1},
+    "width": {"const": 1080},
+    "height": {"const": 1920},
+    "fps": {"type": "integer", "minimum": 24, "maximum": 60},
+    "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 180},
+    "template_id": {"type": "string"},
+    "seed": {"type": "integer"},
+    "fit": {"enum": ["blur", "crop"]},
+    "caption_style": {"type": "object"},
+    "title_style": {"type": "object"},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "items": {"type": "array", "items": {"$ref": "#/$defs/item"}}
+  },
+  "$defs": {
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {"start": {"type": "number", "minimum": 0}, "end": {"type": "number", "minimum": 0}}
+    },
+    "item": {
+      "type": "object",
+      "required": ["type"],
+      "oneOf": [
+        {
+          "properties": {
+            "type": {"const": "video"},
+            "source": {"type": "string"},
+            "media_id": {"type": "string"},
+            "segment_id": {"type": ["string", "null"]},
+            "src_in": {"type": "number", "minimum": 0},
+            "start": {"type": "number", "minimum": 0},
+            "end": {"type": "number", "minimum": 0},
+            "fit": {"enum": ["blur", "crop"]},
+            "focus_x": {"type": "number", "minimum": 0, "maximum": 1},
+            "label": {"type": "string"}
+          },
+          "required": ["type", "source", "src_in", "start", "end"]
+        },
+        {
+          "properties": {
+            "type": {"const": "zoom"},
+            "start": {"type": "number", "minimum": 0},
+            "duration": {"type": "number", "exclusiveMinimum": 0},
+            "scale": {"type": "number", "minimum": 1, "maximum": 2},
+            "ramp": {"type": "number", "minimum": 0}
+          },
+          "required": ["type", "start", "duration", "scale"]
+        },
+        {
+          "properties": {
+            "type": {"const": "fade"},
+            "direction": {"enum": ["in", "out"]},
+            "start": {"type": "number", "minimum": 0},
+            "duration": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "required": ["type", "direction", "start", "duration"]
+        },
+        {
+          "properties": {
+            "type": {"const": "caption"},
+            "start": {"type": "number", "minimum": 0},
+            "end": {"type": "number", "minimum": 0},
+            "text": {"type": "string", "minLength": 1},
+            "words": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["text", "start", "end"],
+                "properties": {
+                  "text": {"type": "string"},
+                  "start": {"type": "number"},
+                  "end": {"type": "number"},
+                  "emphasis": {"type": "boolean"}
+                }
+              }
+            }
+          },
+          "required": ["type", "start", "end", "text"]
+        },
+        {
+          "properties": {
+            "type": {"const": "text"},
+            "role": {"enum": ["title", "cta", "custom"]},
+            "start": {"type": "number", "minimum": 0},
+            "end": {"type": "number", "minimum": 0},
+            "text": {"type": "string", "minLength": 1}
+          },
+          "required": ["type", "start", "end", "text"]
+        },
+        {
+          "properties": {
+            "type": {"const": "image"},
+            "source": {"type": "string"},
+            "start": {"type": "number", "minimum": 0},
+            "end": {"type": "number", "minimum": 0},
+            "x": {"type": "number"},
+            "y": {"type": "number"},
+            "width": {"type": "number", "exclusiveMinimum": 0},
+            "fade": {"type": "number", "minimum": 0}
+          },
+          "required": ["type", "source", "start", "end", "x", "y", "width"]
+        },
+        {
+          "properties": {
+            "type": {"const": "narration"},
+            "source": {"type": "string"},
+            "start": {"type": "number", "minimum": 0},
+            "volume": {"type": "number", "minimum": 0, "maximum": 4}
+          },
+          "required": ["type", "source", "start"]
+        },
+        {
+          "properties": {
+            "type": {"const": "music"},
+            "source": {"type": "string"},
+            "volume": {"type": "number", "minimum": 0, "maximum": 4},
+            "fade_in": {"type": "number", "minimum": 0},
+            "fade_out": {"type": "number", "minimum": 0},
+            "loop": {"type": "boolean"},
+            "duck": {"type": "boolean"},
+            "duck_to": {"type": "number", "minimum": 0, "maximum": 1}
+          },
+          "required": ["type", "source"]
+        },
+        {
+          "properties": {
+            "type": {"const": "sfx"},
+            "source": {"type": "string"},
+            "media_id": {"type": "string"},
+            "category": {"type": "string"},
+            "reason": {"type": "string"},
+            "start": {"type": "number", "minimum": 0},
+            "volume": {"type": "number", "minimum": 0, "maximum": 4}
+          },
+          "required": ["type", "source", "start"]
+        }
+      ]
+    }
+  }
+}

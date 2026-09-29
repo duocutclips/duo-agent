@@ -1,0 +1,76 @@
+{
+  "id": "roblox_top5",
+  "version": 1,
+  "duration": {
+    "target": 30,
+    "min": 15,
+    "max": 45
+  },
+  "fit": "crop",
+  "pacing": {
+    "min_cut": 1.5,
+    "max_cut": 3.0,
+    "max_static_seconds": 3.5
+  },
+  "hook": {
+    "use_best_segment": true,
+    "title_card": true,
+    "title_seconds": 1.8,
+    "sfx": "impact",
+    "punch_in": true
+  },
+  "cta": {
+    "end_card": true,
+    "seconds": 2.0,
+    "sfx": "success",
+    "text": "{cta}"
+  },
+  "zoom": {
+    "intensity": 0.1,
+    "every_n_cuts": 2,
+    "ramp": 0.22,
+    "hold": 0.6,
+    "on_emphasis": true
+  },
+  "sfx": {
+    "density": 0.7,
+    "transition": "pop",
+    "emphasis": "pop",
+    "volume": 0.55
+  },
+  "music": {
+    "enabled": true,
+    "volume": 0.22,
+    "duck_to": 0.25,
+    "fade_in": 0.6,
+    "fade_out": 1.2,
+    "loop": true
+  },
+  "captions": {
+    "font": "DejaVu Sans",
+    "size": 86,
+    "bold": true,
+    "uppercase": true,
+    "primary": "#FFFFFF",
+    "highlight": "#7CFF6B",
+    "stroke": "#000000",
+    "stroke_width": 7,
+    "shadow": 3,
+    "position": "lower_third",
+    "margin_v": 560,
+    "max_words": 3,
+    "word_emphasis": true
+  },
+  "title": {
+    "size": 78,
+    "primary": "#FFFFFF",
+    "box": "#101014",
+    "margin_v": 260
+  },
+  "transitions": {
+    "fade_in": 0.15,
+    "fade_out": 0.45
+  },
+  "name": "Top list",
+  "description": "Countdown/ranking: clear beats per item, pop on each entry, crop framing."
+}

@@ -1,0 +1,58 @@
+# --- secrets -------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+client_secret*.json
+token*.json
+
+# --- runtime data (database, media copies, caches, renders) -------------
+data/
+logs/
+exports/
+*.log
+*.jsonl
+
+# --- generated media -----------------------------------------------------
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.partial
+renders/
+
+# --- Python --------------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+
+# --- Node / frontend -----------------------------------------------------
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
+
+# --- Tauri / Rust --------------------------------------------------------
+apps/desktop/src-tauri/target/
+target/
+apps/desktop/src-tauri/gen/schemas/
+
+# --- test artefacts ------------------------------------------------------
+test-results/
+screenshots/
+
+# --- OS / editors --------------------------------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
